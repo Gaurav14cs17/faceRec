@@ -1,0 +1,9 @@
+numpy>=1.24
+opencv-python>=4.8
+insightface>=0.7.3
+onnxruntime>=1.16
+faiss-cpu>=1.7.4
+PyYAML>=6.0
+
+# Optional GPU (install instead of onnxruntime on CUDA machines):
+# onnxruntime-gpu>=1.16
