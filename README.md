@@ -330,6 +330,42 @@ for r in pipe.process_file("group.jpg"):
 - **100k identities:** FAISS in `faceRec/faiss_gallery.py`; optional `--ivf` for ANN search.
 - **1000 cameras:** frame skip + tracking in `camera/`; horizontal scale (many hosts/GPUs), not one machine on full FPS.
 
+## References & links
+
+This project uses the **InsightFace** stack (`buffalo_l` by default): **SCRFD** detection, **2d106** landmarks, **ArcFace** recognition on **WebFace600K** (`w600k_r50.onnx`).
+
+### Papers (methods used in `weight/`)
+
+| Topic | Paper | Link |
+|-------|--------|------|
+| **Face recognition (ArcFace)** | Deng et al., *ArcFace: Additive Angular Margin Loss for Deep Face Recognition*, CVPR 2019 | [arXiv:1801.07698](https://arxiv.org/abs/1801.07698) · [CVPR open access](https://openaccess.thecvf.com/content_CVPR_2019/html/Deng_ArcFace_Additive_Angular_Margin_Loss_for_Deep_Face_Recognition_CVPR_2019_paper.html) |
+| **Face detection (RetinaFace)** | Deng et al., *RetinaFace: Single-Shot Multi-Level Face Localisation in the Wild*, CVPR 2020 | [arXiv:1905.00641](https://arxiv.org/abs/1905.00641) · [CVPR open access](https://openaccess.thecvf.com/content_CVPR_2020/html/Deng_RetinaFace_Single-Shot_Multi-Level_Face_Localisation_in_the_Wild_CVPR_2020_paper.html) |
+| **Face detection (SCRFD)** | Guo et al., *Sample and Computation Redistribution for Efficient Face Detection*, ICLR 2022 | [arXiv:2105.04714](https://arxiv.org/abs/2105.04714) |
+| **Large-scale training (Partial FC)** | An et al., *Partial FC: Training 10 Million Identities on a Single Machine*, CVPR 2022 | [arXiv:2203.15565](https://arxiv.org/abs/2203.15565) |
+| **Vector search (FAISS)** | Johnson et al., *Billion-scale similarity search with GPUs* | [arXiv:1702.08734](https://arxiv.org/abs/1702.08734) |
+
+### GitHub & official resources
+
+| Resource | Description |
+|----------|-------------|
+| [deepinsight/insightface](https://github.com/deepinsight/insightface) | Main toolbox (detection, recognition, training code) |
+| [Model Zoo README](https://github.com/deepinsight/insightface/blob/master/model_zoo/README.md) | `buffalo_l` / `buffalo_sc` packs and benchmarks |
+| [Python package](https://github.com/deepinsight/insightface/tree/master/python-package) | `pip install insightface` — `FaceAnalysis`, ONNX runtime |
+| [Model releases (buffalo_l zip)](https://github.com/deepinsight/insightface/releases) | Pretrained ONNX packs downloaded by this repo into `data/insightface/` |
+| [SCRFD code](https://github.com/deepinsight/insightface/tree/master/detection/scrfd) | Detector used in `buffalo_l` (`det_10g.onnx`) |
+| [ArcFace PyTorch](https://github.com/deepinsight/insightface/tree/master/recognition/arcface_torch) | Recognition training reference |
+| [InspireFace SDK](https://github.com/deepinsight/insightface/tree/master/cpp-package/inspireface) | Cross-platform C/C++ SDK (2024+) |
+| [facebookresearch/faiss](https://github.com/facebookresearch/faiss) | Library used for `data/index` large-gallery search |
+
+### Related surveys & benchmarks
+
+| Resource | Link |
+|----------|------|
+| InsightFace project site | [insightface.ai](https://insightface.ai) |
+| NIST FRVT (industry benchmark) | [frvt.nist.gov](https://www.nist.gov/programs-projects/face-recognition-vendor-test-frvt) |
+
+**Licensing:** InsightFace **code** is open source; **model weights** (e.g. `buffalo_l`) are typically for **non-commercial research** unless you obtain a [commercial license](https://www.insightface.ai/solutions/face-recognition-licensing). Check terms before production deployment.
+
 ## License & privacy
 
 Face biometrics may be regulated in your region. Use consent, retention limits, and access controls for production deployments.
