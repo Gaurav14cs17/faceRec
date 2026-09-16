@@ -2,31 +2,51 @@
 
 from __future__ import annotations
 
+import logging
 import shutil
 from pathlib import Path
 from typing import Any, List, Optional, Sequence
 
 from config import INSIGHTFACE_ROOT, MODEL_NAME, WEIGHT_DET_DIR, WEIGHT_REC_DIR
 
+LOG = logging.getLogger(__name__)
+
 # Files used by this pipeline (buffalo_l layout)
 DET_ONNX = ("det_10g.onnx", "2d106det.onnx")
 REC_ONNX = ("w600k_r50.onnx",)
+
+_MIN_ONNX_BYTES = 100_000
 
 
 def _pack_dir() -> Path:
     return INSIGHTFACE_ROOT / "models" / MODEL_NAME
 
 
+def _valid_onnx(path: Path) -> bool:
+    """True if path is a real ONNX file (not a broken symlink)."""
+    try:
+        if path.is_symlink():
+            path = path.resolve()
+        return path.is_file() and path.stat().st_size >= _MIN_ONNX_BYTES
+    except OSError:
+        return False
+
+
 def weight_dirs_ready() -> bool:
-    return all((WEIGHT_DET_DIR / f).is_file() for f in DET_ONNX) and all(
-        (WEIGHT_REC_DIR / f).is_file() for f in REC_ONNX
+    return all(_valid_onnx(WEIGHT_DET_DIR / f) for f in DET_ONNX) and all(
+        _valid_onnx(WEIGHT_REC_DIR / f) for f in REC_ONNX
     )
 
 
-def sync_weights(force: bool = False) -> Path:
+def sync_weights(
+    force: bool = False,
+    copy_files: bool = True,
+) -> Path:
     """
-    Copy ONNX files from the downloaded ``buffalo_*`` pack into ``weight/det`` and ``weight/rec``.
-    Returns the pack directory used as source.
+    Install ONNX files into ``weight/det`` and ``weight/rec``.
+
+    By default **copies** files so ``weight/`` works even if ``data/insightface`` is removed.
+    Set ``copy_files=False`` to create symlinks instead (saves disk space).
     """
     from insightface.utils import ensure_available
 
@@ -35,20 +55,45 @@ def sync_weights(force: bool = False) -> Path:
     WEIGHT_REC_DIR.mkdir(parents=True, exist_ok=True)
 
     for name in DET_ONNX:
-        _link_or_copy(src / name, WEIGHT_DET_DIR / name, force=force)
+        _install_file(src / name, WEIGHT_DET_DIR / name, force=force, copy_files=copy_files)
     for name in REC_ONNX:
-        _link_or_copy(src / name, WEIGHT_REC_DIR / name, force=force)
+        _install_file(src / name, WEIGHT_REC_DIR / name, force=force, copy_files=copy_files)
 
+    if not weight_dirs_ready():
+        raise RuntimeError(
+            "weight/det or weight/rec still incomplete after sync. "
+            f"Run: python run.py weights --force"
+        )
     return src
 
 
-def _link_or_copy(src: Path, dst: Path, force: bool) -> None:
-    if not src.is_file():
-        raise FileNotFoundError(f"Missing model file: {src}")
-    if dst.exists() and not force:
+def ensure_weights(force: bool = False) -> None:
+    """Download (if needed) and install weights when missing or broken."""
+    if weight_dirs_ready() and not force:
         return
-    if dst.exists():
+    LOG.info("Installing ONNX weights into weight/det and weight/rec ...")
+    sync_weights(force=True, copy_files=True)
+
+
+def _install_file(
+    src: Path,
+    dst: Path,
+    force: bool,
+    copy_files: bool,
+) -> None:
+    if not src.is_file():
+        raise FileNotFoundError(f"Missing model file in pack: {src}")
+
+    if not force and _valid_onnx(dst):
+        return
+
+    if dst.exists() or dst.is_symlink():
         dst.unlink()
+
+    if copy_files:
+        shutil.copy2(src, dst)
+        return
+
     try:
         dst.symlink_to(src.resolve())
     except OSError:
@@ -73,8 +118,7 @@ def load_recognition_model(
         list(providers) if providers is not None else resolve_providers()
     )
 
-    if not weight_dirs_ready():
-        sync_weights()
+    ensure_weights()
 
     search_dirs: List[Path] = []
     if weight_dirs_ready():

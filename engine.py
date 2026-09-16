@@ -21,7 +21,7 @@ from config import (
 )
 from faceDet.detector import DetectedFace, FaceDetector
 from faceRec.recognizer import FaceRecognizer
-from weight_sync import load_recognition_model, sync_weights, weight_dirs_ready
+from weight_sync import ensure_weights, load_recognition_model, weight_dirs_ready
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ def _create_det_app(
             allowed_modules=["detection", "landmark"],
             providers=list(provider_list),
         )
-    sync_weights()
+    ensure_weights()
     if weight_dirs_ready():
         path = str(WEIGHT_DET_DIR.resolve())
         return FaceAnalysis(

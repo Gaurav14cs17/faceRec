@@ -16,7 +16,7 @@ from config import (
     WEIGHT_DET_DIR,
     WEIGHT_REC_DIR,
 )
-from weight_sync import sync_weights, weight_dirs_ready
+from weight_sync import ensure_weights, sync_weights, weight_dirs_ready
 from pipeline import FacePipeline
 from pipeline_search import SearchPipeline
 from camera.worker import MultiCameraRunner, load_cameras_config
@@ -53,8 +53,8 @@ def cmd_doctor(_: argparse.Namespace) -> int:
     print("Weights det:", WEIGHT_DET_DIR)
     print("Weights rec:", WEIGHT_REC_DIR)
     if not weight_dirs_ready():
-        print("Syncing weight/det and weight/rec from model pack...")
-        sync_weights()
+        print("Downloading and installing ONNX into weight/det and weight/rec ...")
+        ensure_weights(force=True)
     print("Loading models...")
     pipe = FacePipeline()
     _ = pipe.detector.detect(np.zeros((64, 64, 3), dtype=np.uint8))
@@ -63,10 +63,18 @@ def cmd_doctor(_: argparse.Namespace) -> int:
 
 
 def cmd_weights(args: argparse.Namespace) -> int:
-    src = sync_weights(force=args.force)
+    src = sync_weights(
+        force=args.force,
+        copy_files=not args.symlink,
+    )
     print(f"Synced from: {src}")
     print("det:", sorted(p.name for p in WEIGHT_DET_DIR.glob("*.onnx")))
     print("rec:", sorted(p.name for p in WEIGHT_REC_DIR.glob("*.onnx")))
+    for folder, names in ((WEIGHT_DET_DIR, ("det_10g.onnx", "2d106det.onnx")), (WEIGHT_REC_DIR, ("w600k_r50.onnx",))):
+        for name in names:
+            p = folder / name
+            kind = "copy" if p.is_file() and not p.is_symlink() else "link"
+            print(f"  {p} ({kind}, {p.stat().st_size // 1_000_000} MB)")
     return 0
 
 
@@ -228,7 +236,7 @@ def cmd_test(args: argparse.Namespace) -> int:
             return 1
 
     if not weight_dirs_ready():
-        sync_weights()
+        ensure_weights(force=True)
 
     print("== doctor ==")
     if cmd_doctor(args) != 0:
@@ -326,6 +334,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--force",
         action="store_true",
         help="Replace existing files in weight/",
+    )
+    p_w.add_argument(
+        "--symlink",
+        action="store_true",
+        help="Symlink instead of copy (default: copy real .onnx into weight/)",
     )
     p_w.set_defaults(func=cmd_weights)
 

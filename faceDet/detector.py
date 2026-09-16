@@ -16,7 +16,7 @@ from config import (
     resolve_providers,
     WEIGHT_DET_DIR,
 )
-from weight_sync import sync_weights, weight_dirs_ready
+from weight_sync import ensure_weights, weight_dirs_ready
 
 
 @dataclass(frozen=True)
@@ -53,7 +53,7 @@ class FaceDetector:
             self._app = app
         else:
             if not weight_dirs_ready():
-                sync_weights()
+                ensure_weights()
             if weight_dirs_ready():
                 model_path = str(WEIGHT_DET_DIR.resolve())
             else:

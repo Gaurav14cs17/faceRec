@@ -207,12 +207,14 @@ cd faceRec
 pip install -r requirements.txt
 ```
 
-First run downloads `buffalo_l` weights into `data/insightface/` and can symlink them into `weight/det` and `weight/rec`:
+First run downloads `buffalo_l` and **copies** ONNX files into `weight/det` and `weight/rec` (real files, not broken symlinks):
 
 ```bash
-python run.py weights
+python run.py weights --force   # ~326 MB download first time
 python run.py doctor
 ```
+
+If `weight/**/*.onnx` is missing, run `python run.py weights --force` again.
 
 ## Quick start
 

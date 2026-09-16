@@ -17,7 +17,7 @@ from config import (
     resolve_providers,
     WEIGHT_REC_DIR,
 )
-from weight_sync import load_recognition_model, sync_weights, weight_dirs_ready
+from weight_sync import ensure_weights, load_recognition_model, weight_dirs_ready
 from faceDet.detector import DetectedFace
 
 
@@ -53,7 +53,7 @@ class FaceRecognizer:
             self._app = app
         else:
             if not weight_dirs_ready():
-                sync_weights()
+                ensure_weights()
             self._rec_model = load_recognition_model(provider_list, model_name)
 
         self._gallery: Dict[str, np.ndarray] = {}
